@@ -1,0 +1,49 @@
+name: μpkg bundle
+description: Uses μpkg to create a μpkg tarball package
+inputs:
+  upkg-version:
+    description: The version of μpkg to use for bundling
+    default: latest
+    required: false
+  version:
+    description: The version to write to upkg.json, corresponds to `-V` in `upkg bundle`
+    default: ""
+    required: false
+  dest:
+    description: The package destination, corresponds to `-d` in `upkg bundle`.
+    default: ""
+    required: false
+  paths:
+    description: Argument (space separated) list of relative paths to files and directories to include in the package.
+    default: ""
+    required: false
+  working-directory:
+    description: The working directory to change to before bundling.
+    default: "."
+    required: false
+outputs:
+  bundle-path:
+    description: The location of the bundled package
+    value: ${{ steps.dest.outputs.bundle-path }}
+runs:
+  using: composite
+  steps:
+  - uses: orbit-online/upkg-install@v1
+    with:
+      version: ${{ inputs.upkg-version }}
+  - id: version
+    uses: orbit-online/program-version@v1
+    if: ${{ inputs.version == '' }}
+  - name: Create μpkg tarball package
+    shell: bash
+    run: >
+      upkg bundle
+      -V "${{ inputs.version == '' && steps.version.outputs.version || inputs.version }}"
+      ${{ inputs.dest != '' && format('-d "{0}"', inputs.dest) || '' }}
+      ${{ inputs.paths }}
+    working-directory: ${{ inputs.working-directory }}
+  - name: Determine the bundle path
+    id: dest
+    shell: bash
+    run: printf "bundle-path=%s\n" "$(realpath "${{ inputs.dest != '' && inputs.dest || '"$(jq -r .name upkg.json).tar.gz"' }}")" >> $GITHUB_OUTPUT
+    working-directory: ${{ inputs.working-directory }}
