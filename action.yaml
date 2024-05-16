@@ -3,7 +3,7 @@ description: Uses μpkg to create a μpkg tarball package
 inputs:
   upkg-version:
     description: The version of μpkg to use for bundling
-    default: latest
+    default: ""
     required: false
   version:
     description: The version to write to upkg.json, corresponds to `-V` in `upkg bundle`
@@ -22,28 +22,51 @@ inputs:
     default: "."
     required: false
 outputs:
-  bundle-path:
+  dest:
     description: The location of the bundled package
-    value: ${{ steps.dest.outputs.bundle-path }}
+    value: ${{ steps.dest.outputs.dest }}
+  basename:
+    description: The basename of the bundled package
+    value: ${{ steps.dest.outputs.basename }}
+  sha256:
+    description: The SHA-256 checksum of the bundled package
+    value: ${{ steps.dest.outputs.sha256 }}
 runs:
   using: composite
   steps:
+  - name: Link upkg if it is already installed
+    id: upkg-install
+    shell: bash
+    run: |
+      if type upkg >/dev/null 2>&1; then
+        upkg_path=$(which upkg)
+        mkdir "${{ github.action_path }}/bin"
+        ln -s "$upkg_path" "${{ github.action_path }}/bin/upkg"
+      fi
+      printf "path=%s\n" "$upkg_path" >> $GITHUB_OUTPUT
+    if: ${{ inputs.upkg-version == '' }}
   - uses: orbit-online/upkg-install@v1
     with:
-      version: ${{ inputs.upkg-version }}
+      install-prefix: ${{ github.action_path }}
+      version: ${{ inputs.upkg-version || 'latest' }}
+    if: "${{ steps.upkg-install.outputs.path == '' || inputs.upkg-version != '' }}"
   - id: version
     uses: orbit-online/program-version@v1
     if: ${{ inputs.version == '' }}
   - name: Create μpkg tarball package
     shell: bash
     run: >
-      upkg bundle
+      "${{ github.action_path }}/bin/upkg" bundle
       -V "${{ inputs.version == '' && steps.version.outputs.version || inputs.version }}"
       ${{ inputs.dest != '' && format('-d "{0}"', inputs.dest) || '' }}
       ${{ inputs.paths }}
     working-directory: ${{ inputs.working-directory }}
-  - name: Determine the bundle path
+  - name: Determine the bundle path and shasum
     id: dest
     shell: bash
-    run: printf "bundle-path=%s\n" "$(realpath "${{ inputs.dest != '' && inputs.dest || '"$(jq -r .name upkg.json).tar.gz"' }}")" >> $GITHUB_OUTPUT
+    run: |
+      dest=$(realpath "${{ inputs.dest != '' && inputs.dest || '"$(jq -re ".name // empty" upkg.json).tar.gz"' }}")
+      printf "dest=%s\n" "$dest" >> $GITHUB_OUTPUT
+      printf "basename=%s\n" "$(basename "$dest")" >> $GITHUB_OUTPUT
+      printf "sha256=%s\n" "$(shasum -a 256 "$dest" | cut -d ' ' -f1)" >> $GITHUB_OUTPUT
     working-directory: ${{ inputs.working-directory }}
