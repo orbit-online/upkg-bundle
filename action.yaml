@@ -11,7 +11,7 @@ inputs:
     required: false
   version:
     description: The version to write to upkg.json, corresponds to `-V` in `upkg bundle`
-    default: ""
+    default: "---auto---"
     required: false
   dest:
     description: The package destination, corresponds to `-d` in `upkg bundle`.
@@ -31,7 +31,7 @@ outputs:
     value: ${{ steps.pkgname.outputs.pkgname }}
   version:
     description: The version of the bundled package
-    value: ${{ inputs.version == '' && steps.version.outputs.version || inputs.version }}
+    value: ${{ inputs.version == '---auto---' && steps.version.outputs.version || inputs.version }}
   dest:
     description: The location of the bundled package
     value: ${{ steps.dest.outputs.dest }}
@@ -77,13 +77,13 @@ runs:
 
   - id: version
     uses: orbit-online/program-version@v1
-    if: ${{ inputs.version == '' }}
+    if: ${{ inputs.version == '---auto---' }}
 
   - name: Create μpkg tarball package
     shell: bash
     run: >
       "${{ github.action_path }}/bin/upkg" bundle
-      -V "${{ inputs.version == '' && steps.version.outputs.version || inputs.version }}"
+      ${{ inputs.version != '' && format('-V  "{0}"', inputs.version == '---auto---' && steps.version.outputs.version || inputs.version) || '' }}
       ${{ steps.pkgname.outputs.pkgname != '' && format('-p "{0}"', steps.pkgname.outputs.pkgname) || '' }}
       ${{ inputs.dest != '' && format('-d "{0}"', inputs.dest) || '' }}
       ${{ inputs.paths }}
