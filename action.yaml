@@ -5,6 +5,10 @@ inputs:
     description: The version of μpkg to use for bundling
     default: ""
     required: false
+  name:
+    description: The name of the package, will override the name already set in `upkg.json`
+    default: ""
+    required: false
   version:
     description: The version to write to upkg.json, corresponds to `-V` in `upkg bundle`
     default: ""
@@ -22,6 +26,12 @@ inputs:
     default: "."
     required: false
 outputs:
+  name:
+    description: The name of the bundled package
+    value: ${{ steps.pkgname.outputs.pkgname }}
+  version:
+    description: The version of the bundled package
+    value: ${{ inputs.version == '' && steps.version.outputs.version || inputs.version }}
   dest:
     description: The location of the bundled package
     value: ${{ steps.dest.outputs.dest }}
@@ -31,9 +41,6 @@ outputs:
   sha256:
     description: The SHA-256 checksum of the bundled package
     value: ${{ steps.dest.outputs.sha256 }}
-  version:
-    description: The package version that was set
-    value: ${{ inputs.version == '' && steps.version.outputs.version || inputs.version }}
 runs:
   using: composite
   steps:
@@ -53,14 +60,31 @@ runs:
       install-prefix: ${{ github.action_path }}
       version: ${{ inputs.upkg-version || 'latest' }}
     if: "${{ steps.upkg-install.outputs.path == '' || inputs.upkg-version != '' }}"
+
+  - name: Determine the package name to set
+    id: pkgname
+    shell: bash
+    run: |
+      if [[ -n $PKGNAME ]]; then
+        printf "pkgname=%s\n" "$PKGNAME" >> $GITHUB_OUTPUT
+      elif ! jq -re '.name // empty' upkg.json >/dev/null 2>&1; then
+        printf "pkgname=%s\n" "$(basename "$REPONAME")" >> $GITHUB_OUTPUT
+      fi
+    env:
+      PKGNAME: ${{ inputs.name }}
+      REPONAME: ${{ github.repository }}
+    working-directory: ${{ inputs.working-directory }}
+
   - id: version
     uses: orbit-online/program-version@v1
     if: ${{ inputs.version == '' }}
+
   - name: Create μpkg tarball package
     shell: bash
     run: >
       "${{ github.action_path }}/bin/upkg" bundle
       -V "${{ inputs.version == '' && steps.version.outputs.version || inputs.version }}"
+      ${{ steps.pkgname.outputs.pkgname != '' && format('-p "{0}"', steps.pkgname.outputs.pkgname) || '' }}
       ${{ inputs.dest != '' && format('-d "{0}"', inputs.dest) || '' }}
       ${{ inputs.paths }}
     working-directory: ${{ inputs.working-directory }}

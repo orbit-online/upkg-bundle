@@ -40,6 +40,7 @@ jobs:
 | Name                | Description                                                                 | Default                                                                                     |
 | ------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | `upkg-version`      | The version of μpkg to use for bundling                                     | The one already installed or `latest` (to always get `latest`, set this input explicitly)   |
+| `name`              | The name of the package, will override the name already set in `upkg.json`  | If `upkg.json` has no name: Name of the repository (without user/org prefix)                |
 | `version`           | The version to write to upkg.json, corresponds to `-V` in `upkg bundle`     | [`program-version.sh "${{ github.ref }}"`](https://github.com/orbit-online/program-version) |
 | `dest`              | The package destination, corresponds to `-d` in `upkg bundle`               | None, the μpkg default                                                                      |
 | `paths`             | Argument (space separated) list of relative paths to include in the package | None, the μpkg default                                                                      |
@@ -49,7 +50,8 @@ jobs:
 
 | Name       | Description                                 |
 | ---------- | ------------------------------------------- |
+| `name`     | The name of the bundled package             |
+| `version`  | The version the bundled package             |
 | `dest`     | The location of the bundled package         |
 | `basename` | The filename of the bundled package         |
 | `sha256`   | The SHA-256 checksum of the bundled package |
-| `version`  | The package version that was set            |
