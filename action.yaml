@@ -31,6 +31,9 @@ outputs:
   sha256:
     description: The SHA-256 checksum of the bundled package
     value: ${{ steps.dest.outputs.sha256 }}
+  version:
+    description: The package version that was set
+    value: ${{ inputs.version == '' && steps.version.outputs.version || inputs.version }}
 runs:
   using: composite
   steps:

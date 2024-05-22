@@ -52,3 +52,4 @@ jobs:
 | `dest`     | The location of the bundled package         |
 | `basename` | The filename of the bundled package         |
 | `sha256`   | The SHA-256 checksum of the bundled package |
+| `version`  | The package version that was set            |
