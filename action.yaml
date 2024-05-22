@@ -34,7 +34,7 @@ outputs:
     value: ${{ inputs.version == '---auto---' && steps.version.outputs.version || inputs.version }}
   dest:
     description: The location of the bundled package
-    value: ${{ steps.dest.outputs.dest }}
+    value: ${{ steps.bundle.outputs.dest }}
   basename:
     description: The basename of the bundled package
     value: ${{ steps.dest.outputs.basename }}
@@ -81,19 +81,20 @@ runs:
 
   - name: Create μpkg tarball package
     shell: bash
+    id: bundle
     run: >
+      printf "dest=" >> $GITHUB_OUTPUT;
       "${{ github.action_path }}/bin/upkg" bundle
       ${{ inputs.version != '' && format('-V  "{0}"', inputs.version == '---auto---' && steps.version.outputs.version || inputs.version) || '' }}
       ${{ steps.pkgname.outputs.pkgname != '' && format('-p "{0}"', steps.pkgname.outputs.pkgname) || '' }}
       ${{ inputs.dest != '' && format('-d "{0}"', inputs.dest) || '' }}
-      ${{ inputs.paths }}
+      ${{ inputs.paths }} | tee -a "$GITHUB_OUTPUT"
     working-directory: ${{ inputs.working-directory }}
-  - name: Determine the bundle path and shasum
+
+  - name: Determine the bundle basename path and shasum
     id: dest
     shell: bash
     run: |
-      dest=$(realpath "${{ inputs.dest != '' && inputs.dest || '"$(jq -re ".name // empty" upkg.json).tar.gz"' }}")
-      printf "dest=%s\n" "$dest" >> $GITHUB_OUTPUT
-      printf "basename=%s\n" "$(basename "$dest")" >> $GITHUB_OUTPUT
-      printf "sha256=%s\n" "$(shasum -a 256 "$dest" | cut -d ' ' -f1)" >> $GITHUB_OUTPUT
+      printf "basename=%s\n" "$(basename "${{ steps.bundle.outputs.dest }}")" >> $GITHUB_OUTPUT
+      printf "sha256=%s\n" "$(shasum -a 256 "${{ steps.bundle.outputs.dest }}" | cut -d ' ' -f1)" >> $GITHUB_OUTPUT
     working-directory: ${{ inputs.working-directory }}
