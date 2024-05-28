@@ -28,7 +28,7 @@ inputs:
 outputs:
   name:
     description: The name of the bundled package
-    value: ${{ steps.pkgname.outputs.pkgname }}
+    value: ${{ steps.dest.outputs.pkgname }}
   version:
     description: The version of the bundled package
     value: ${{ inputs.version == '---auto---' && steps.version.outputs.version || inputs.version }}
@@ -95,6 +95,7 @@ runs:
     id: dest
     shell: bash
     run: |
+      printf "pkgname=%s\n" "$(tar xOf "${{ steps.bundle.outputs.dest }}" upkg.json | jq -r '.name // empty')" >> $GITHUB_OUTPUT
       printf "basename=%s\n" "$(basename "${{ steps.bundle.outputs.dest }}")" >> $GITHUB_OUTPUT
       printf "sha256=%s\n" "$(shasum -a 256 "${{ steps.bundle.outputs.dest }}" | cut -d ' ' -f1)" >> $GITHUB_OUTPUT
     working-directory: ${{ inputs.working-directory }}
