@@ -59,6 +59,7 @@ runs:
     with:
       install-prefix: ${{ github.action_path }}
       version: ${{ inputs.upkg-version || 'latest' }}
+      install-dependencies: false
     if: "${{ steps.upkg-install.outputs.path == '' || inputs.upkg-version != '' }}"
 
   - name: Determine the package name to set
