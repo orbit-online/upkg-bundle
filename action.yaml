@@ -84,12 +84,14 @@ runs:
     shell: bash
     id: bundle
     run: >
-      printf "dest=" >> $GITHUB_OUTPUT;
+      dest=$(
       "${{ github.action_path }}/bin/upkg" bundle
       ${{ inputs.version != '' && format('-V  "{0}"', inputs.version == '---auto---' && steps.version.outputs.version || inputs.version) || '' }}
       ${{ steps.pkgname.outputs.pkgname != '' && format('-p "{0}"', steps.pkgname.outputs.pkgname) || '' }}
       ${{ inputs.dest != '' && format('-d "{0}"', inputs.dest) || '' }}
-      ${{ inputs.paths }} | tee -a "$GITHUB_OUTPUT"
+      ${{ inputs.paths }}
+      );
+      printf "dest=%s" "$(realpath "$dest")" >> $GITHUB_OUTPUT
     working-directory: ${{ inputs.working-directory }}
 
   - name: Determine the bundle basename path and shasum
